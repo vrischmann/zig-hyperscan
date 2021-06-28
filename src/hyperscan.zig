@@ -9,10 +9,18 @@ pub const FlagCaseless = c.HS_FLAG_CASELESS;
 pub const FlagDotall = c.HS_FLAG_DOTALL;
 
 pub const ModeBlock = c.HS_MODE_BLOCK;
+pub const ModeStartOfMatchHorizonLarge = c.HS_MODE_SOM_HORIZON_LARGE;
 
 pub const CompileDiagnostics = struct {
     message: []const u8,
     expression: usize,
+};
+
+pub const MatchEventHandler = fn (id: c_uint, from: usize, to: usize, flags: c_uint, context: ?*c_void) callconv(.C) c_int;
+
+pub const ScanContext = struct {
+    pattern: []const u8,
+    input_data: []const u8,
 };
 
 pub const Database = struct {
@@ -45,6 +53,23 @@ pub const Database = struct {
 
     pub fn deinit(self: *Self) void {
         _ = c.hs_free_database(self.db);
+    }
+
+    pub fn scan(self: *Self, input: []const u8, flags: c_uint, scratch: *Scratch, scan_context: *ScanContext, event_handler: MatchEventHandler) !void {
+        const hs_err = c.hs_scan(
+            self.db,
+            @ptrCast([*c]const u8, input),
+            @intCast(c_uint, input.len),
+            flags,
+            scratch.scratch,
+            event_handler,
+            @ptrCast(*c_void, scan_context),
+        );
+        switch (hs_err) {
+            c.HS_SUCCESS => return,
+            c.HS_SCAN_TERMINATED => return error.HyperscanScanTerminated,
+            else => unreachable,
+        }
     }
 };
 
