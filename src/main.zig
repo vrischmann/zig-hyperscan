@@ -6,17 +6,24 @@ const hyperscan = @import("hyperscan.zig");
 
 const logger = std.log.scoped(.main);
 
+var matches: usize = 0;
+
 fn matchEventHandler(id: c_uint, from: usize, to: usize, flags: c_uint, context: ?*c_void) callconv(.C) c_int {
     _ = id;
+    _ = from;
+    _ = to;
     _ = flags;
+    _ = context;
 
-    const scan_context = @ptrCast(*hyperscan.ScanContext, @alignCast(8, context.?));
+    matches += 1;
 
-    logger.debug("Match for pattern from {d} to {d}: {s}", .{
-        from,
-        to,
-        scan_context.input_data[from..to],
-    });
+    // const scan_context = @ptrCast(*hyperscan.ScanContext, @alignCast(8, context.?));
+
+    // logger.debug("Match for pattern from {d} to {d}: {s}", .{
+    //     from,
+    //     to,
+    //     scan_context.input_data[from..to],
+    // });
 
     return 0;
 }
@@ -51,7 +58,7 @@ pub fn main() anyerror!void {
         db.compile(
             &compile_arena.allocator,
             pattern,
-            hyperscan.FlagDotall | hyperscan.FlagStartOfMatchLeftmost,
+            hyperscan.FlagDotall,
             hyperscan.ModeBlock,
             &compile_diags,
         ) catch |err| {
@@ -73,4 +80,8 @@ pub fn main() anyerror!void {
         .pattern = pattern,
     };
     try db.scan(input_data, 0, &scratch, &scan_context, matchEventHandler);
+
+    //
+
+    logger.info("matches: {d}", .{matches});
 }
