@@ -1,10 +1,13 @@
 const std = @import("std");
 const debug = std.debug;
 const heap = std.heap;
+const os = std.os;
 
 const hyperscan = @import("hyperscan.zig");
 
 const logger = std.log.scoped(.main);
+
+pub const log_level: std.log.Level = .debug;
 
 var matches: usize = 0;
 
@@ -47,7 +50,17 @@ pub fn main() anyerror!void {
     const input = try args_iter.next(allocator) orelse debug.panic("expected 'input' arg", .{});
 
     const input_file = try std.fs.cwd().openFile(input, .{});
-    const input_data = try input_file.reader().readAllAlloc(allocator, std.math.maxInt(usize));
+
+    // const input_data = try input_file.reader().readAllAlloc(allocator, std.math.maxInt(usize));
+
+    const input_data = try os.mmap(
+        null,
+        (try input_file.stat()).size,
+        os.PROT_READ,
+        os.MAP_SHARED,
+        input_file.handle,
+        0,
+    );
 
     var db: hyperscan.Database = undefined;
     {
