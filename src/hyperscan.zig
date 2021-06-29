@@ -69,7 +69,7 @@ pub const Database = struct {
         switch (hs_err) {
             c.HS_SUCCESS => return,
             c.HS_SCAN_TERMINATED => return error.HyperscanScanTerminated,
-            else => unreachable,
+            else => std.debug.panic("unexpected error {d}\n", .{hs_err}),
         }
     }
 };
@@ -91,7 +91,7 @@ pub const Scratch = struct {
             c.HS_SUCCESS => return self,
             c.HS_NOMEM => return error.OutOfMemory,
             c.HS_INVALID => return error.HyperscanInvalidParameter,
-            else => unreachable,
+            else => std.debug.panic("unexpected error {d}\n", .{hs_err}),
         }
     }
 
@@ -99,3 +99,31 @@ pub const Scratch = struct {
         _ = c.hs_free_scratch(self.scratch);
     }
 };
+
+var hs_allocator: *mem.Allocator = undefined;
+
+fn hsAlloc(len: usize) callconv(.C) ?*c_void {
+    const data = hs_allocator.alloc(u8, len) catch return null;
+    return @ptrCast(*c_void, data.ptr);
+}
+
+fn hsFree(ptr: ?*c_void) callconv(.C) void {
+    if (ptr) |p| {
+        const data = @ptrCast([*]u8, @alignCast(8, p))[0..];
+        @breakpoint();
+        hs_allocator.free(data);
+    }
+}
+
+pub fn setAllocator(allocator: *mem.Allocator) !void {
+    hs_allocator = allocator;
+
+    const hs_err = c.hs_set_allocator(
+        hsAlloc,
+        hsFree,
+    );
+    switch (hs_err) {
+        c.HS_SUCCESS => return,
+        else => std.debug.panic("unexpected error {d}\n", .{hs_err}),
+    }
+}

@@ -43,6 +43,13 @@ pub fn main() anyerror!void {
 
     //
 
+    var hs_arena = heap.ArenaAllocator.init(&gpa.allocator);
+    defer hs_arena.deinit();
+
+    // try hyperscan.setAllocator(&hs_arena.allocator);
+
+    //
+
     var args_iter = std.process.args();
     if (!args_iter.skip()) debug.panic("expected self arg", .{});
 
