@@ -7,6 +7,7 @@ const c = @cImport({
 
 pub const FlagCaseless = c.HS_FLAG_CASELESS;
 pub const FlagDotall = c.HS_FLAG_DOTALL;
+pub const FlagStartOfMatchLeftmost = c.HS_FLAG_SOM_LEFTMOST;
 
 pub const ModeBlock = c.HS_MODE_BLOCK;
 pub const ModeStartOfMatchHorizonLarge = c.HS_MODE_SOM_HORIZON_LARGE;

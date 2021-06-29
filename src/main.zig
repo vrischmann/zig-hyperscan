@@ -51,7 +51,7 @@ pub fn main() anyerror!void {
         db.compile(
             &compile_arena.allocator,
             pattern,
-            hyperscan.FlagDotall,
+            hyperscan.FlagDotall | hyperscan.FlagStartOfMatchLeftmost,
             hyperscan.ModeBlock,
             &compile_diags,
         ) catch |err| {
