@@ -63,8 +63,8 @@ pub fn main() anyerror!void {
     const input_data = try os.mmap(
         null,
         (try input_file.stat()).size,
-        os.PROT_READ,
-        os.MAP_SHARED,
+        os.PROT.READ,
+        os.MAP.SHARED,
         input_file.handle,
         0,
     );
