@@ -17,7 +17,7 @@ pub const CompileDiagnostics = struct {
     expression: usize,
 };
 
-pub const MatchEventHandler = fn (id: c_uint, from: usize, to: usize, flags: c_uint, context: ?*c_void) callconv(.C) c_int;
+pub const MatchEventHandler = fn (id: c_uint, from: usize, to: usize, flags: c_uint, context: ?*anyopaque) callconv(.C) c_int;
 
 pub const ScanContext = struct {
     pattern: []const u8,
@@ -29,7 +29,7 @@ pub const Database = struct {
 
     db: *c.hs_database,
 
-    pub fn compile(self: *Self, allocator: *mem.Allocator, pattern: []const u8, flags: c_uint, mode: c_uint, diagnostics: ?*CompileDiagnostics) !void {
+    pub fn compile(self: *Self, allocator: mem.Allocator, pattern: []const u8, flags: c_uint, mode: c_uint, diagnostics: ?*CompileDiagnostics) !void {
         var dummy_diags: CompileDiagnostics = undefined;
         var diags = diagnostics orelse &dummy_diags;
 
@@ -47,7 +47,7 @@ pub const Database = struct {
             @ptrCast([*c][*c]c.hs_compile_error_t, &compile_err),
         );
         if (hs_err != c.HS_SUCCESS) {
-            diags.message = try allocator.dupe(u8, mem.spanZ(compile_err.message));
+            diags.message = try allocator.dupe(u8, mem.sliceTo(compile_err.message, 0));
             return error.HyperscanCompilerError;
         }
     }
@@ -64,7 +64,7 @@ pub const Database = struct {
             flags,
             scratch.scratch,
             event_handler,
-            @ptrCast(*c_void, scan_context),
+            @ptrCast(*anyopaque, scan_context),
         );
         switch (hs_err) {
             c.HS_SUCCESS => return,
@@ -100,14 +100,14 @@ pub const Scratch = struct {
     }
 };
 
-var hs_allocator: *mem.Allocator = undefined;
+var hs_allocator: mem.Allocator = undefined;
 
-fn hsAlloc(len: usize) callconv(.C) ?*c_void {
+fn hsAlloc(len: usize) callconv(.C) ?*anyopaque {
     const data = hs_allocator.alloc(u8, len) catch return null;
-    return @ptrCast(*c_void, data.ptr);
+    return @ptrCast(*anyopaque, data.ptr);
 }
 
-fn hsFree(ptr: ?*c_void) callconv(.C) void {
+fn hsFree(ptr: ?*anyopaque) callconv(.C) void {
     if (ptr) |p| {
         const data = @ptrCast([*]u8, @alignCast(8, p))[0..];
         @breakpoint();
@@ -115,7 +115,7 @@ fn hsFree(ptr: ?*c_void) callconv(.C) void {
     }
 }
 
-pub fn setAllocator(allocator: *mem.Allocator) !void {
+pub fn setAllocator(allocator: mem.Allocator) !void {
     hs_allocator = allocator;
 
     const hs_err = c.hs_set_allocator(

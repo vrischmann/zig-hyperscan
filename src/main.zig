@@ -11,7 +11,7 @@ pub const log_level: std.log.Level = .debug;
 
 var matches: usize = 0;
 
-fn matchEventHandler(id: c_uint, from: usize, to: usize, flags: c_uint, context: ?*c_void) callconv(.C) c_int {
+fn matchEventHandler(id: c_uint, from: usize, to: usize, flags: c_uint, context: ?*anyopaque) callconv(.C) c_int {
     _ = id;
     _ = from;
     _ = to;
@@ -37,13 +37,12 @@ pub fn main() anyerror!void {
         debug.panic("leaks detected", .{});
     };
 
-    var arena = heap.ArenaAllocator.init(&gpa.allocator);
+    var arena = heap.ArenaAllocator.init(gpa.allocator());
     defer arena.deinit();
-    var allocator = &arena.allocator;
 
     //
 
-    var hs_arena = heap.ArenaAllocator.init(&gpa.allocator);
+    var hs_arena = heap.ArenaAllocator.init(gpa.allocator());
     defer hs_arena.deinit();
 
     // try hyperscan.setAllocator(&hs_arena.allocator);
@@ -53,8 +52,8 @@ pub fn main() anyerror!void {
     var args_iter = std.process.args();
     if (!args_iter.skip()) debug.panic("expected self arg", .{});
 
-    const pattern = try args_iter.next(allocator) orelse debug.panic("expected 'pattern' arg", .{});
-    const input = try args_iter.next(allocator) orelse debug.panic("expected 'input' arg", .{});
+    const pattern = args_iter.next() orelse debug.panic("expected 'pattern' arg", .{});
+    const input = args_iter.next() orelse debug.panic("expected 'input' arg", .{});
 
     const input_file = try std.fs.cwd().openFile(input, .{});
 
@@ -71,12 +70,12 @@ pub fn main() anyerror!void {
 
     var db: hyperscan.Database = undefined;
     {
-        var compile_arena = heap.ArenaAllocator.init(&gpa.allocator);
+        var compile_arena = heap.ArenaAllocator.init(gpa.allocator());
         defer compile_arena.deinit();
 
         var compile_diags: hyperscan.CompileDiagnostics = undefined;
         db.compile(
-            &compile_arena.allocator,
+            compile_arena.allocator(),
             pattern,
             hyperscan.FlagDotall,
             hyperscan.ModeBlock,
