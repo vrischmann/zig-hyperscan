@@ -39,7 +39,7 @@ pub const Database = struct {
 
         var compile_err: *c.hs_compile_error_t = undefined;
         const hs_err = c.hs_compile(
-            nul_terminated_pattern,
+            @ptrCast([*c]const u8, nul_terminated_pattern),
             flags,
             mode,
             null,
