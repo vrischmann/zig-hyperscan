@@ -56,7 +56,7 @@ pub const Database = struct {
         _ = c.hs_free_database(self.db);
     }
 
-    pub fn scan(self: *Self, input: []const u8, flags: c_uint, scratch: *Scratch, scan_context: *ScanContext, event_handler: MatchEventHandler) !void {
+    pub fn scan(self: *Self, input: []const u8, flags: c_uint, scratch: *Scratch, scan_context: *ScanContext, comptime event_handler: MatchEventHandler) !void {
         const hs_err = c.hs_scan(
             self.db,
             @ptrCast([*c]const u8, input),
